@@ -43,8 +43,8 @@ class GithubStatusChecks
   attr_reader :remote_url, :git_sha, :github_client, :combined_status
 
   def initialize
-   @remote_url = `git config --get remote.origin.url`.to_s.strip.delete_prefix("https://github.com/")
-   @git_sha = `git rev-parse HEAD`.to_s.strip
+   @remote_url = (`git config --get remote.origin.url` || "").to_s.strip.delete_prefix("https://github.com/")
+   @git_sha = (`git rev-parse HEAD` || "").to_s.strip
 
    puts "[DEBUG] Remote URL: #{@remote_url.inspect}"
    puts "[DEBUG] Git SHA: #{@git_sha.inspect}"
@@ -57,20 +57,23 @@ class GithubStatusChecks
   end
 
   def state
-    combined_status[:state]
+    combined_status && combined_status[:state]
+
   end
 
   def first_status_url
-    first_status = combined_status[:statuses].find { |status| status[:state] == state }
-    first_status && first_status[:target_url]
+    if combined_status && combined_status[:statuses]
+      first_status = combined_status[:statuses].find { |status| status[:state] == state }
+      first_status && first_status[:target_url]
+    end
   end
 
   def complete_count
-    combined_status[:statuses].count { |status| status[:state] != "pending"}
+     combined_status && combined_status[:statuses] ? combined_status[:statuses].count { |status| status[:state] != "pending" } : 0
   end
 
   def total_count
-    combined_status[:statuses].count
+    combined_status && combined_status[:statuses] ? combined_status[:statuses].count : 0
   end
 
   def current_status
